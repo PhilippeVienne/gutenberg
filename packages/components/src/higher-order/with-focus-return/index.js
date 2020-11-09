@@ -33,9 +33,9 @@ function isComponentLike( object ) {
  * when the component is unmounted.
  *
  * @param {(WPComponent|Object)} options The component to be enhanced with
- *                                      focus return behavior, or an object
- *                                      describing the component and the
- *                                      focus return characteristics.
+ *                                       focus return behavior, or an object
+ *                                       describing the component and the
+ *                                       focus return characteristics.
  *
  * @return {WPComponent} Component with the focus restauration behaviour.
  */
@@ -65,11 +65,12 @@ function withFocusReturn( options ) {
 						return;
 					}
 
-					// Defer to the component's own explicit focus return behavior,
-					// if specified. The function should return `false` to prevent
-					// the default behavior otherwise occurring here. This allows
-					// for support that the `onFocusReturn` decides to allow the
-					// default behavior to occur under some conditions.
+					// Defer to the component's own explicit focus return
+					// behavior, if specified. The function should return
+					// `false` to prevent the default behavior otherwise
+					// occurring here. This allows for support that the
+					// `onFocusReturn` decides to allow the default behavior to
+					// occur under some conditions.
 					if ( onFocusReturn() === false ) {
 						return;
 					}
