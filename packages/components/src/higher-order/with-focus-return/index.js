@@ -6,7 +6,7 @@ import { stubTrue, without } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { Component } from '@wordpress/element';
+import { Component, useEffect, useRef } from '@wordpress/element';
 import { createHigherOrderComponent } from '@wordpress/compose';
 
 /**
@@ -50,66 +50,63 @@ function withFocusReturn( options ) {
 	const { onFocusReturn = stubTrue } = options;
 
 	return ( WrappedComponent ) => {
-		class FocusReturn extends Component {
-			constructor() {
-				super( ...arguments );
+		function FocusReturn( { childProps, focus } ) {
+			const ref = useRef();
+			const ownFocusedElements = useRef( new Set() );
+			const isFocused = useRef( false );
 
-				this.ownFocusedElements = new Set();
-				this.activeElementOnMount = document.activeElement;
-				this.setIsFocusedFalse = () => ( this.isFocused = false );
-				this.setIsFocusedTrue = ( event ) => {
-					this.ownFocusedElements.add( event.target );
-					this.isFocused = true;
-				};
-			}
+			useEffect( () => {
+				const { ownerDocument } = ref.current;
+				const { activeElement, body } = ownerDocument;
+				const activeElementOnMount = activeElement;
 
-			componentWillUnmount() {
-				const {
-					activeElementOnMount,
-					isFocused,
-					ownFocusedElements,
-				} = this;
-
-				if ( ! isFocused ) {
-					return;
-				}
-
-				// Defer to the component's own explicit focus return behavior,
-				// if specified. The function should return `false` to prevent
-				// the default behavior otherwise occurring here. This allows
-				// for support that the `onFocusReturn` decides to allow the
-				// default behavior to occur under some conditions.
-				if ( onFocusReturn() === false ) {
-					return;
-				}
-
-				const stack = [
-					...without(
-						this.props.focus.focusHistory,
-						...ownFocusedElements
-					),
-					activeElementOnMount,
-				];
-
-				let candidate;
-				while ( ( candidate = stack.pop() ) ) {
-					if ( document.body.contains( candidate ) ) {
-						candidate.focus();
+				return () => {
+					if ( ! isFocused.current ) {
 						return;
 					}
-				}
+
+					// Defer to the component's own explicit focus return behavior,
+					// if specified. The function should return `false` to prevent
+					// the default behavior otherwise occurring here. This allows
+					// for support that the `onFocusReturn` decides to allow the
+					// default behavior to occur under some conditions.
+					if ( onFocusReturn() === false ) {
+						return;
+					}
+
+					const stack = [
+						...without(
+							focus.focusHistory,
+							...ownFocusedElements.current
+						),
+						activeElementOnMount,
+					];
+
+					let candidate;
+
+					while ( ( candidate = stack.pop() ) ) {
+						if ( body.contains( candidate ) ) {
+							candidate.focus();
+							return;
+						}
+					}
+				};
+			}, [] );
+
+			function onFocus( event ) {
+				ownFocusedElements.current.add( event.target );
+				isFocused.current = true;
 			}
 
-			render() {
-				return (
-					<div
-						onFocus={ this.setIsFocusedTrue }
-						onBlur={ this.setIsFocusedFalse }
-					>
-						<WrappedComponent { ...this.props.childProps } />
-					</div>
-				);
+			function onBlur() {
+				isFocused.current = false;
 			}
+
+			return (
+				<div ref={ ref } onFocus={ onFocus } onBlur={ onBlur }>
+					<WrappedComponent { ...childProps } />
+				</div>
+			);
 		}
 
 		return ( props ) => (
